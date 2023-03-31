@@ -2,7 +2,9 @@
 
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    background-color: #fff;
 }
+
 
 h1:focus {
     outline: none;
@@ -14,12 +16,37 @@ a, .btn-link {
 
 .btn-primary {
     color: #fff;
+    font-size: 90%;
     background-color: #1b6ec2;
     border-color: #1861ac;
+    border-radius: 0.7rem;
+    width: 10%;
+    height: 2.75rem;
+}
+
+.item {
+    background-color: #f0f8ff;
+    border-radius: 0.5rem;
+    padding: 2rem;
+    margin: 1rem;
 }
 
 .content {
     padding-top: 1.1rem;
+    margin-top: 8rem;
+    font-size: 1.5rem;
+}
+
+h1 {
+    font-size: 3.5rem;
+    font-weight: bold;
+}
+
+input {
+    border-radius: 0.7rem;
+    width: 35%;
+    background-color: #afeeee;
+    margin: 0.5rem;
 }
 
 .valid.modified:not([type=checkbox]) {

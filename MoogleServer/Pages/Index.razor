@@ -6,11 +6,11 @@
 
 <input class="p-1 my-4" @bind="query" placeholder="Introduzca su búsqueda">
 
-<button type="default" class="btn btn-primary" @onclick="RunQuery">🔍 Buscar</button>
+<button type="default" class="btn btn-primary"  @onclick="RunQuery">🔍 Buscar</button>
 
 @if (!string.IsNullOrEmpty(result.Suggestion)) {
     <div class="suggestion">
-        <p>¿Quisite decir <strong><a href="#">@result.Suggestion</a></strong>?</p>
+        <p>¿Quisiste decir <strong><a href="#" >@result.Suggestion</a></strong>?</p>
     </div>
 }
 
