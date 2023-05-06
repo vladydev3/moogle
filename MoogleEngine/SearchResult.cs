@@ -2,7 +2,8 @@ namespace MoogleEngine;
 
 public class SearchResult
 {
-    private SearchItem[] items;
+    //Public para poder llamarlo desde el html
+    public SearchItem[] items;
 
     public SearchResult(SearchItem[] items, string suggestion="")
     {

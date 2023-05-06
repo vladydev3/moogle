@@ -1,99 +1,54 @@
-﻿using System;
-namespace MoogleEngine;
+﻿namespace MoogleEngine;
 
 class Query{
-    public string text;
-    public static List<string> splitText = new List<string>();
-    public static Dictionary<string,int> StemmedQuery = new Dictionary<string, int>();
-    public static Dictionary<string,int> QueryVoc = new Dictionary<string, int>();
-    public static double[]? QueryVector;
-    //Palabras que no aparecen en los documentos
+    //Texto de la query
+    private string text = "";
+    public static string[] splitText = new string[0];
+    //Pequeño diccionario que contiene las palabras de la query y los valores de tf-idf
+    public Dictionary<string,double> queryVector = new Dictionary<string, double>();
+
+    //Para saber si se hace algun cambio en la query
+    public bool change = false;
     public Query(string query){
-        QueryVoc = new Dictionary<string, int>();
-        StemmedQuery = new Dictionary<string, int>();
+        queryVector = new Dictionary<string, double>();
         text = query;
-        splitText = query.ToLower().Split(" ~!*^,;".ToCharArray(),StringSplitOptions.RemoveEmptyEntries).ToList();
-        foreach (string word in splitText)
-        {   //Si no hay docs que contengan una palabra, buscamos la mas similar
-            if(Documents.DocsContainsWord(word)==0) {
-                string similar = SimilarWord(word);
-                if (QueryVoc.ContainsKey(similar)){
-                    QueryVoc[similar]++;
-                }
-                else QueryVoc[similar] = 1;
-            }
+        //SearchOperator(text);
+        //Separamos el texto
+        splitText = query.ToLower().Split(" ?~!*^,;".ToCharArray(),StringSplitOptions.RemoveEmptyEntries);
+        for(int i=0;i<splitText.Length;i++)
+        {
+            string word = SpanishStemmer.Stemmer(splitText[i]);
+            if(!Documents.idf.ContainsKey(word)){
+                //string similar = SimilarWord(splitText[i]);
+                //if(!String.IsNullOrEmpty(similar)) Moogle.suggestion += similar + " ";
+            }         
             //Si la palabra ya la tenemos agregada al dic, le aumentamos la frecuencia
-            else if (QueryVoc.ContainsKey(word)){
-                QueryVoc[word]++;
+            else if (queryVector.ContainsKey(word)){
+                queryVector[word]++;
             }//En caso contrario la agregamos
-            else QueryVoc[word] = 1;
-            //Hacemos lo mismo para los sufijos
-            if(Documents.DocsContainsSufix(Documents.Stemming(word))==0){
-                string similarSufix = SimilarSufix(Documents.Stemming(word));
-                if (StemmedQuery.ContainsKey(similarSufix)){
-                    StemmedQuery[similarSufix]++;
-                }
-                else StemmedQuery[similarSufix] = 1;
-            }
-            else if(StemmedQuery.ContainsKey(Documents.Stemming(word))){
-                StemmedQuery[Documents.Stemming(word)]++;
-            }
-            else StemmedQuery[Documents.Stemming(word)] = 1;
+            else queryVector[word] = 1;
         }
         QueryProcessed();
+        SearchOperator(query);
     }
-    //Buscar palabra mas parecida a la que no aparece en la query
+    //Buscar palabras mas parecidas a la que no aparece en la query
     public static string SimilarWord(string NotFound){
         string similar = "";
-        double similarTFIDF = 0;
-        int distance = int.MaxValue;
-        foreach (var diccionarios in Documents.tf_idf)
+        foreach (var diccionarios in Documents.wordsinText)
         {
             foreach (var word in diccionarios)
             {
-                if(LevenshteinDistance(NotFound, word.Key)<distance){
-                    distance = LevenshteinDistance(NotFound, word.Key);
-                    similar = word.Key;
-                    similarTFIDF = word.Value;
-                }
-                else if(LevenshteinDistance(NotFound, word.Key)==distance){
-                    if(similarTFIDF<word.Value){
-                        similar = word.Key;
-                        similarTFIDF = word.Value;
-                    }
+                if(Levenshtein.DistanciaLev(NotFound, word)<(NotFound.Length/2) && Documents.idf.ContainsKey(word)){
+                    similar = word;
+                    break;
                 }
             }
         }
-        
+        if(String.IsNullOrEmpty(similar)) return "";
         return similar;
     }
 
-    public static string SimilarSufix(string NotFound){
-        string similarSufix = "";
-        double similarTFIDF = 0;
-        int distance = int.MaxValue;
-        foreach (var diccionarios in Documents.tf_idf_stem)
-        {
-            foreach (var word in diccionarios)
-            {
-                if(LevenshteinDistance(NotFound, word.Key)<distance){
-                    distance = LevenshteinDistance(NotFound, word.Key);
-                    similarSufix = word.Key;
-                    similarTFIDF = word.Value;
-                }
-                else if(LevenshteinDistance(NotFound, word.Key)==distance){
-                    if(similarTFIDF<word.Value){
-                        similarSufix = word.Key;
-                        similarTFIDF = word.Value;
-                    }
-                }
-            }
-        }
-        
-        return similarSufix;
-    }
-
-    public static int LevenshteinDistance(string s, string t)
+    private static int LevenshteinDistance(string s, string t)
     {
         int n = s.Length;
         int m = t.Length;
@@ -135,17 +90,19 @@ class Query{
         return d[n, m];
     }
 
-    public static void QueryProcessed(){
-        List<double> temp = new List<double>();
-        foreach (var word in QueryVoc)
+    private void QueryProcessed(){
+        Dictionary<string,double> temp = new Dictionary<string, double>(queryVector.Count);
+        foreach (var word in queryVector)
         {            
-            double tfidf = Documents.TF_IDF(word.Value,QueryVoc.Count,Documents.DocText.Count,Documents.DocsContainsWord(word.Key));
-            if(tfidf>0.09d){
-                temp.Add(tfidf);
-            }
+            double tfidf = 0;
+            tfidf = Documents.TF((int)word.Value, queryVector.Count) * Documents.idf[word.Key];
+            temp.Add(word.Key,tfidf);
         }
-        QueryVector = temp.ToArray();
+        queryVector = Documents.NormalizeVector(temp);
     }
+    static void SearchOperator(string query){
+    }
+
     
 }
 

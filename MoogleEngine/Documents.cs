@@ -1,120 +1,162 @@
-﻿using Porter2Stemmer;
+﻿using System.Text.RegularExpressions;
+using System.Text;
 namespace MoogleEngine;
 
-public class Documents{
-    //Titulo de cada documento
-    public static List<string> DocTitle = new List<string>();
-    //Texto de cada documento
-    public static List<string> DocText = new List<string>();
-    //Una lista de listas donde la interna tiene las palabras separadas de cada documento
-    public static List<List<string>> TokenizedText = new List<List<string>>();
-    public static List<Dictionary<string,int>> StemText = new List<Dictionary<string, int>>();
-    //Valores TF-IDF de cada palabra de cada documento
-    public static List<Dictionary<string,double>> tf_idf = new List<Dictionary<string, double>>();
-    public static List<Dictionary<string,double>> tf_idf_stem = new List<Dictionary<string, double>>();
-
-    public static List<Dictionary<string,int>> vocabulary = new List<Dictionary<string,int>>();
-    public Documents(){
-        //Lista donde cada elemento es un documento representado por las palabras y la cantidad de veces que se repiten
-        int indextemp = 0;
-        for (int i = 0; i < TokenizedText.Count; i++)
-        {
-            vocabulary.Add(new Dictionary<string, int>());
-            StemText.Add(new Dictionary<string, int>());
-            foreach (var word in TokenizedText[i])
-            {   //Este itera sobre cada palabra del doc
-                //Si la palabra ya la tenemos agregada al dic, le aumentamos la frecuencia
-                if (vocabulary[indextemp].ContainsKey(word)){
-                    vocabulary[indextemp][word]++;
-                }//En caso contrario la agregamos
-                else vocabulary[indextemp][word] = 1;
-                //Llenamos el diccionario de las palabras stemmizadas
-                if (StemText[indextemp].ContainsKey(Stemming(word))){
-                    StemText[indextemp][Stemming(word)]++;
-                }
-                else StemText[indextemp][Stemming(word)] = 1;
-            }
-            indextemp++;
-        }
-
-        
-        foreach (var document in vocabulary)
-        {
-            Dictionary<string,double> dictemp = new Dictionary<string, double>();
-            foreach (var word in document)
-            {
-                if(TF_IDF(word.Value,document.Count,DocTitle.Count,DocsContainsWord(word.Key))>0.02d){
-                    dictemp.Add(word.Key,TF_IDF(word.Value,document.Count,DocTitle.Count,DocsContainsWord(word.Key)));
-                }
-            }
-            tf_idf.Add(dictemp);
-        }
-        foreach (var document in StemText){
-            Dictionary<string,double> dictemp = new Dictionary<string, double>();
-            foreach (var wordstem in document)
-            {
-                if(TF_IDF(wordstem.Value,document.Count,DocTitle.Count,DocsContainsSufix(wordstem.Key))>0.02d){
-                    dictemp.Add(wordstem.Key,TF_IDF(wordstem.Value,document.Count,DocTitle.Count,DocsContainsSufix(wordstem.Key)));
-                }
-            }
-            tf_idf_stem.Add(dictemp);
-        }
-        {
-            
-        }
-    }
-    public static double TF_IDF(int frec, int words, int docs, int docswithword){
-        return ((Math.Log((double)frec+1)/(words))) * (Math.Log(((double)docs+1)/docswithword));
-    }
-
-    public static string Stemming(string word)
+public class Documents
 {
-    var stemmer = new EnglishPorter2Stemmer();
-    string stemmedWord = "";
+    //Titulo de cada documento
+    public static string[] DocTitle = new string[0];
+    //Texto de cada documento
+    public static string[] DocText = new string[0];
+    //Vocabulario donde se guardan las palabras con stemming y la cantidad de veces que aparecen en el texto
+    public static Dictionary<string, int>[] stemwordFrec = new Dictionary<string, int>[0];
+    //Variable solo para tener las palabras unicas sin stemming de cada doc
+    public static HashSet<string>[] wordsinText = new HashSet<string>[0];
+    //Valores IDF de cada palabra del corpus
+    public static Dictionary<string, double> idf = new Dictionary<string, double>();
+    //Valores TF-IDF de cada palabra de cada documento
+    public static Dictionary<string, double>[] tf_idf = new Dictionary<string, double>[0];
 
-    stemmedWord = stemmer.Stem(word).Value;
+    public static void LoadDocs()
+    {
+        string[] files = Directory.GetFiles(Path.Join("..", "Content"));
+        DocTitle = new string[files.Length];
+        DocText = new string[files.Length];
+        wordsinText = new HashSet<string>[files.Length];
 
-    return stemmedWord;
-}
-
-    public string GetTitle(int pos){
-        return DocTitle[pos];
-    }
-    public string GetText(int pos){
-        return DocText[pos];
-    }
-    public static void LoadDocs(){//Metodo que carga los archivos 
-        string[] files = Directory.GetFiles("..", "*.txt",SearchOption.AllDirectories);
-        foreach (var item in files)
+        stemwordFrec = new Dictionary<string, int>[DocText.Length];
+        tf_idf = new Dictionary<string, double>[DocText.Length];
+        
+        Parallel.ForEach(files, (file, state, index) =>
         {
             //Tomamos el titulo del documento y lo agregamos a su respectiva lista
-            string name = Path.GetFileNameWithoutExtension(item);
-            DocTitle.Add(name);
+            string name = Path.GetFileNameWithoutExtension(file);
+            DocTitle[index] = name;
+            
             //Ahora hacemos lo mismo para el texto de cada doc
-            string content = File.ReadAllText(item);
-            DocText.Add(content);
-            //Dividimos el texto en cada palabra y lo agregamos a la lista de listas                          
-            TokenizedText.Add(content.Replace("\n","").Replace("\r","").ToLower().Split(" @$/#.-:&*+=[]?!(){},'\">_<;%\\".ToCharArray(),StringSplitOptions.RemoveEmptyEntries).ToList());                        
+            Encoding encoding = Encoding.UTF8; // UTF-8 para manejar correctamente caracteres acentuados
+            using (StreamReader reader = new StreamReader(file,encoding))
+            {
+                string content = reader.ReadToEnd();
+                DocText[index] = content;
+                string strippedContent = Regex.Replace(content, @"[\p{P}\p{S}]+", " "); // Eliminar signos de puntuación
+                string[] words = strippedContent.ToLower().Split(new[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+                wordsinText[index] = words.ToHashSet();
+                string[] stemwords = StemmingText(words);
+                //Ordenar las palabras del texto para contar luego las repetidas
+                Array.Sort(stemwords);
+                //Agrupar y contar las palabras repetidas
+                var groupedWords = stemwords.GroupBy(w => w);
+                Dictionary<string, int> wordCounts = groupedWords.ToDictionary(g => g.Key, g => g.Count());
+                //Crear un nuevo hashset a partir del diccionario de counts
+                HashSet<string> wordSet = new HashSet<string>(wordCounts.Keys);
+                //Agregar el hashset al array de documentos
+                stemwordFrec[index] = new Dictionary<string, int>(wordSet.Select(w => new KeyValuePair<string, int>(w, wordCounts[w])));
+            }
+        });
+        IDFCorpus();
+        CreateTF_IDF();
+    }
+
+private static void IDFCorpus()
+{
+    int N = stemwordFrec.Length; //Cantidad de documentos
+    int maxDocs = (int)Math.Ceiling(N * 0.5); //Umbral para descartar palabras muy comunes
+
+    Dictionary<string, int> docCount = new Dictionary<string, int>();
+
+    // Recorre todas las palabras únicas y cuenta en cuántos documentos están
+    foreach (var doc in stemwordFrec)
+    {
+        HashSet<string> uniqueWords = new HashSet<string>(doc.Keys);
+        
+        foreach (var word in uniqueWords)
+        {
+            if (!docCount.ContainsKey(word))
+            {
+                docCount[word] = 0;
+            }
+            
+            docCount[word]++;
         }
     }
-    public static int DocsContainsWord(string word){
-        int count = 0;
-        foreach (var document in vocabulary)
+
+    // Calcula el IDF de cada palabra y descarta las muy comunes
+    foreach (var word in docCount.Keys)
+    {
+        if (docCount[word] < maxDocs)
         {
-            if(document.ContainsKey(word)){
-                count++;
-            }
+            idf[word] = Math.Log10(N / (double)docCount[word]);
         }
-        return count;
     }
-    public static int DocsContainsSufix(string sufix){
-        int count = 0;
-        foreach (var document in StemText)
+}
+    public static double TF(int frec, int mostCommonWord)
+    {
+        return ((double)frec / (double)mostCommonWord);
+    }
+
+    public static void CreateTF_IDF()
+    {
+        tf_idf = new Dictionary<string, double>[stemwordFrec.Length];
+
+        Parallel.ForEach(stemwordFrec, (document, state, i) =>
         {
-            if(document.ContainsKey(sufix)){
-                count++;
+            tf_idf[i] = new Dictionary<string, double>();
+            int mostCommon = document.Values.Max();
+
+            foreach (var word in document)
+            {
+                if (idf.ContainsKey(word.Key))
+                {
+                    if (!tf_idf[i].ContainsKey(word.Key))
+                    {
+                        tf_idf[i].Add(word.Key, TF(word.Value, mostCommon) * idf[word.Key]);
+                    }
+                }
+            }
+            tf_idf[i] = NormalizeVector(tf_idf[i]);
+        });
+    }
+    public static Dictionary<string,double> NormalizeVector(Dictionary<string,double> vector){
+        double sumOfSquares = Math.Sqrt(vector.Values.Sum(x => x * x));
+        foreach (var row in vector)
+        {
+            vector[row.Key] = row.Value / sumOfSquares;
+        }
+        return vector;
+    }
+    public static string Stemming(string word){
+        return SpanishStemmer.Stemmer(word);
+    }
+    public static string[] StemmingText(string[] words){
+        string[] wordsStem = new string[words.Length];
+        for(int i=0;i<words.Length;i++){
+            wordsStem[i] = SpanishStemmer.Stemmer(words[i]);
+        }
+        return wordsStem;
+    }
+    public static string CreateSnippet(int indexDoc, string[] query)//Este metodo coge el snip 
+    {
+        string text = DocText[indexDoc];
+        int middle = -1;
+        int SnipLeng = 500;
+
+        foreach (string word in query)
+        {
+            middle = text.IndexOf(word);
+            if (middle >= 0)
+            {
+                if (text.Length <= SnipLeng)
+                    return text;
+                if (text.Length - middle <= SnipLeng)
+                    return text.Substring(middle, text.Length - middle);
+
+                if (middle < 250)
+                    return text.Substring(0, SnipLeng);
+                else
+                    return text.Substring(middle - 250, SnipLeng);
             }
         }
-        return count;
+        return text.Substring(0,500);
     }
 }

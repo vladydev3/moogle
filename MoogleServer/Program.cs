@@ -1,6 +1,7 @@
 using System.Reflection.Metadata;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using System.Diagnostics;
 using MoogleEngine;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -25,6 +26,10 @@ app.UseRouting();
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
 
+Stopwatch crono = new Stopwatch();
+crono.Start();
 Documents.LoadDocs();
-var d = new Documents();
+crono.Stop();
+Console.WriteLine((double)crono.ElapsedMilliseconds / 1000);
+
 app.Run();

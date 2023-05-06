@@ -5,96 +5,55 @@ html, body {
     color: white;
 }
 
-/*
-
-h1:focus {
-    outline: none;
+img {
+    width: 420px;
+    height: 160px;
+    margin: 1.5rem;
+    margin-bottom: 0.5rem;
 }
-
-a, .btn-link {
-    color: #260e03;
-}
-
-.btn-primary {
-    color: #fff;
-    font-size: 90%;
-    background-color: #a52323;
-    border-color: #ced7e1;
-    border-radius: 0.7rem;
-    width: 10%;
-    height: 2.75rem;
-}
-
-.item {
-    background-color: #20010122;
-    border-radius: 0.5rem;
-    padding: 2rem;
-    margin: 1rem;
-    color: #c89f9f;
-}
-
-.content {
-    padding-top: 1.1rem;
-    margin-top: 8rem;
-    font-size: 1.5rem;
-}
-
-h1 {
-    font-size: 3.5rem;
-    font-weight: bold;
-    color: #95d1d1;
-}
-
-input {
-    border-radius: 0.7rem;
-    width: 35%;
-    background-color: #afeeee;
-    margin: 0.5rem;
-}
-*/
-/* Estilos para h1 */
-h1 {
-  font-size: 50px;
-  color: #b3b3b3;
-  text-align: center;
-  margin-top: 50px;
-}
-input {
+.search {
     font-size: 18px;
     color: black;
-    background-color: #f2f2f2;
+    background-color: #1c1c1c;
     border: none;
-    padding: 12px;
     border-radius: 8px;
-    width: 400px;
+    width: 350px;
     margin-left: auto;
     margin-right: auto;
-    display: block;
   }
-
+input {
+    padding: 1rem;
+    width: 27rem;
+    height: 3rem;
+    border-radius: 0.6rem;
+    border-bottom-right-radius: 0;
+    border-top-right-radius: 0;
+    position: relative;
+    background-color: #272323;
+    border: #b3b3b3;
+    color: rgb(255, 255, 255);
+}
 button {
-    font-size: 20px;
-    color: white;
-    background-color: #4d4d4d;
-    border: none;
-    padding: 12px 30px;
-    border-radius: 8px;
-    display: block;
-    margin-top: -5px;
-    margin-left: auto;
-    margin-right: auto;
+    border: #b3b3b3;
+    color: rgb(255, 255, 255);
+    border-radius: 0.6rem;
+    border-bottom-left-radius: 0;
+    border-top-left-radius: 0;
+    width: 7rem;
+    height: 3rem;
+    background-color: #272323;
 }
 
-/* Estilos para resultado de sugerencia */
-.suggestion {
-  font-size: 18px;
-  color: white;
-  background-color: #333333;
-  padding: 12px;
-  border-radius: 8px;
-  margin-top: 20px;
-  text-align: center;
+.box {
+    font-size: 18px;
+    color: white;
+    background-color: #333333;
+    width: 30%;
+    margin: 20px auto;
+    border-radius: 8px;
+    text-align: center;
 }
+
 
 /* Estilos para resultados */
 .results {
