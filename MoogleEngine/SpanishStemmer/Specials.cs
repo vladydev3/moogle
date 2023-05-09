@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 
-namespace MoogleEngine;
-
+namespace SpanishStemmer
+{
     public static class Specials
     {
         public static List<char> Vocales = new List<char>() { 'a', 'e', 'i', 'o', 'u' };
@@ -157,3 +157,4 @@ namespace MoogleEngine;
             return res;
         }
     }
+}

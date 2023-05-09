@@ -2,24 +2,24 @@
 
 public class VectorModel
 {
+    //Para guardar el Score
     public List<(double,int)> Score = new List<(double, int)>();
+    private static Dictionary<string,double> query = new Dictionary<string, double>(); 
 
     public VectorModel(Dictionary<string,double> queryVector)
     {
-        for (int i = 0; i < Documents.tf_idf.Length; i++)
+        query = queryVector;
+        for (int i = 0; i < Documents.tf_idf_Matrix.Length; i++)
         {
-            int count = 0;
-            foreach (KeyValuePair<string, double> queryword in queryVector)
-            {
-                if(Documents.tf_idf[i].ContainsKey(queryword.Key)) count++;
-            }
-            if(count==0) continue;
-            double similarity = CosineSimilarity(Documents.tf_idf[i], queryVector);
+            //Si el documento no es relevante, pasa a la otra iteración
+            if (!RelevantDoc(Documents.tf_idf_Matrix[i])) continue;
+            double similarity = CosineSimilarity(Documents.tf_idf_Matrix[i], queryVector);
             foreach (var word in Query.splitText)
             {
+                //Si el documento contiene además de la raíz de la palabra, la palabra exacta a la que ingresó el usuario, se le multiplica * 10 el valor de score
                 if(Documents.wordsinText[i].Contains(word))
                 {
-                    similarity += 10;
+                    similarity *= 10;
                 }
             }
             if (similarity>0) Score.Add((similarity,i));
@@ -36,7 +36,7 @@ public class VectorModel
     }
 
     static double DotProduct(Dictionary<string,double> vector1, Dictionary<string,double> vector2)
-    {
+    {   //Producto escalar
         double dotProduct = 0;
 
         foreach (var word in vector2)
@@ -46,5 +46,37 @@ public class VectorModel
             }
         }
         return dotProduct;
+    }
+    private static bool RelevantDoc(Dictionary<string,double> docTFIDF){
+        //Comprueba si el documento es relevante para la query
+        string[] querykeys = query.Keys.ToArray();
+        if (Query.requireoperator.Item1){
+            for (int i = 0; i < Query.requireoperator.Item2.Count; i++)
+            {
+                if(!docTFIDF.ContainsKey(querykeys[Query.requireoperator.Item2[i]])) return false;
+            }
+        }
+        if (Query.excludeoperator.Item1){
+            for (int i = 0; i < Query.excludeoperator.Item2.Count; i++)
+            {
+                if(docTFIDF.ContainsKey(querykeys[Query.excludeoperator.Item2[i]])) return false;
+            }
+        }
+        if (Query.proximityoperator.Item1){
+            int index1 = Query.proximityoperator.Item2.Item1;
+            int index2 = Query.proximityoperator.Item2.Item2;
+            if (!docTFIDF.ContainsKey(querykeys[index1]) || !docTFIDF.ContainsKey(querykeys[index2])){
+                return false;
+            }
+        }
+        if(!Query.requireoperator.Item1 && !Query.excludeoperator.Item1 && !Query.proximityoperator.Item1) {
+            foreach (KeyValuePair<string, double> word in query)
+            {
+                //Si contiene al menos una palabra de la query y esta tiene tf-idf mayor que 0.05 (o sea no es una stopword) el documento es válido
+                if(docTFIDF.ContainsKey(word.Key) && word.Value > 0.05) return true;
+            }       
+            return false;
+        }
+        return true;
     }
 }

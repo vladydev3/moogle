@@ -1,108 +1,114 @@
-﻿namespace MoogleEngine;
+﻿using System.Text.RegularExpressions;
+namespace MoogleEngine;
 
-class Query{
+class Query
+{
     //Texto de la query
     private string text = "";
     public static string[] splitText = new string[0];
-    //Pequeño diccionario que contiene las palabras de la query y los valores de tf-idf
-    public Dictionary<string,double> queryVector = new Dictionary<string, double>();
+    //Diccionario que contiene las palabras de la query y los valores de tf-idf
+    public Dictionary<string, double> queryVector = new Dictionary<string, double>();
+    //Lista para almacenar el operador de importancia
+    static List<int> k = new List<int>();
+    //Variables de los operadores
+    public static (bool, List<int>) requireoperator = (false, new List<int>());
+    public static (bool, List<int>) excludeoperator = (false, new List<int>());
+    public static (bool, (int, int)) proximityoperator = (false, (0, 0));
 
-    //Para saber si se hace algun cambio en la query
-    public bool change = false;
-    public Query(string query){
+    public Query(string query)
+    {
         queryVector = new Dictionary<string, double>();
+        requireoperator = (false, new List<int>());
+        excludeoperator = (false, new List<int>());
         text = query;
-        //SearchOperator(text);
-        //Separamos el texto
-        splitText = query.ToLower().Split(" ?~!*^,;".ToCharArray(),StringSplitOptions.RemoveEmptyEntries);
-        for(int i=0;i<splitText.Length;i++)
+        //Se separa el texto
+        splitText = query.ToLower().Split(" ?,;".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+        AnyOperator(splitText); //Busca si hay algún operador
+        for (int i = 0; i < splitText.Length; i++)
         {
-            string word = SpanishStemmer.Stemmer(splitText[i]);
-            if(!Documents.idf.ContainsKey(word)){
-                //string similar = SimilarWord(splitText[i]);
-                //if(!String.IsNullOrEmpty(similar)) Moogle.suggestion += similar + " ";
-            }         
+            //Se le aplica stemming a las palabras
+            string word = Documents.Stemming(splitText[i]);
+            //Buscar el operador de importancia
+            word = ImportanceOperator(word);
+            if (!Documents.idf.ContainsKey(word))
+            {   //Si una palabra no aparece en el corpus se busca la similar y se almacena en suggestion
+                string similar = SimilarWord(splitText[i]);
+                if (!String.IsNullOrEmpty(similar)) Moogle.suggestion += similar + " ";
+            }
             //Si la palabra ya la tenemos agregada al dic, le aumentamos la frecuencia
-            else if (queryVector.ContainsKey(word)){
+            else if (queryVector.ContainsKey(word))
+            {
                 queryVector[word]++;
             }//En caso contrario la agregamos
             else queryVector[word] = 1;
         }
         QueryProcessed();
-        SearchOperator(query);
     }
     //Buscar palabras mas parecidas a la que no aparece en la query
-    public static string SimilarWord(string NotFound){
+    public static string SimilarWord(string NotFound)
+    {
         string similar = "";
+        int shortestDistance = int.MaxValue;
         foreach (var diccionarios in Documents.wordsinText)
         {
             foreach (var word in diccionarios)
             {
-                if(Levenshtein.DistanciaLev(NotFound, word)<(NotFound.Length/2) && Documents.idf.ContainsKey(word)){
+                int distance = Levenshtein.DistanciaLev(NotFound, word);
+                if (distance < shortestDistance)
+                {   //Se guarda la menor distancia entre la palabra no encontrada y las palabras del corpus
+                    shortestDistance = distance;
                     similar = word;
-                    break;
                 }
             }
         }
-        if(String.IsNullOrEmpty(similar)) return "";
+        if (String.IsNullOrEmpty(similar)) return "";
         return similar;
     }
 
-    private static int LevenshteinDistance(string s, string t)
+    private void QueryProcessed()
     {
-        int n = s.Length;
-        int m = t.Length;
-        int[,] d = new int[n + 1, m + 1];
-        
-        // Verify arguments.
-        if (n == 0)
-        {
-            return m;
-        }
-        
-        if (m == 0)
-        {
-            return n;
-        }
-        
-        // Initialize arrays.
-        for (int i = 0; i <= n; d[i, 0] = i++)
-        {
-        }
-        
-        for (int j = 0; j <= m; d[0, j] = j++)
-        {
-        }
-        
-        // Begin looping.
-        for (int i = 1; i <= n; i++)
-        {
-            for (int j = 1; j <= m; j++)
-            {
-                // Compute cost.
-                int cost = (t[j - 1] == s[i - 1]) ? 0 : 1;
-                d[i, j] = Math.Min(
-                Math.Min(d[i - 1, j] + 1, d[i, j - 1] + 1),
-                d[i - 1, j - 1] + cost);
-            }
-        }
-        // Return cost.
-        return d[n, m];
-    }
-
-    private void QueryProcessed(){
-        Dictionary<string,double> temp = new Dictionary<string, double>(queryVector.Count);
+        Dictionary<string, double> temp = new Dictionary<string, double>(queryVector.Count);
+        int i = 0;
         foreach (var word in queryVector)
-        {            
+        {
             double tfidf = 0;
-            tfidf = Documents.TF((int)word.Value, queryVector.Count) * Documents.idf[word.Key];
-            temp.Add(word.Key,tfidf);
+            tfidf = Documents.TF((int)word.Value, queryVector.Count) * Documents.idf[word.Key] * Math.Pow(2, k[i++]);//Para agregarle el operador de importancia
+            temp.Add(word.Key, tfidf);
         }
         queryVector = Documents.NormalizeVector(temp);
     }
-    static void SearchOperator(string query){
-    }
 
-    
+    private static void AnyOperator(string[] query)
+    {
+        //Se le dan
+        for (int i = 0; i < query.Length; i++)
+        {
+            if (query[i].Contains("^"))
+            {
+                requireoperator.Item1 = true;
+                requireoperator.Item2.Add(i);
+                splitText[i] = splitText[i].Replace("^", "");
+            }
+            if (query[i].Contains("!"))
+            {
+                excludeoperator.Item1 = true;
+                excludeoperator.Item2.Add(i);
+                splitText[i] = splitText[i].Replace("!", "");
+            }
+            if (query[i] == "~")
+            {
+                proximityoperator.Item1 = true;
+                proximityoperator.Item2 = (i - 1, i);
+                var temp = splitText.ToList();
+                temp.RemoveAt(i);
+                splitText = temp.ToArray();
+            }
+        }
+    }
+    private string ImportanceOperator(string queryWord)
+    {
+        k.Add(queryWord.Count(c => c == '*'));
+        return queryWord.Replace("*", "");
+    }
 }
 

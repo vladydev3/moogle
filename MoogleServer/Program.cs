@@ -26,10 +26,6 @@ app.UseRouting();
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
 
-Stopwatch crono = new Stopwatch();
-crono.Start();
+//Cargamos los documentos antes de que se ejecute el programa
 Documents.LoadDocs();
-crono.Stop();
-Console.WriteLine((double)crono.ElapsedMilliseconds / 1000);
-
 app.Run();

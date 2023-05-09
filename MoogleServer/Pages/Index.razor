@@ -18,7 +18,7 @@
 }
 @if (!string.IsNullOrEmpty(query)){
     <div class="time">
-        @if (result.items.Length != 0){
+        @if (result.Count != 0){
             <p>The search took <strong>@Moogle.time.TotalSeconds</strong> seconds</p>     
         }
     </div>
@@ -26,7 +26,7 @@
 </div>
 
 <ul class="results">
-@if (result.items.Length == 0 && !string.IsNullOrEmpty(query)){
+@if (result.Count == 0 && !string.IsNullOrEmpty(query)){
     <p><strong>Sorry, 0 results were found</strong></p>
 }
 @foreach (var item in result.Items()) {
