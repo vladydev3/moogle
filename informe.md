@@ -46,14 +46,14 @@ stemwordFrec[index] = new Dictionary<string, int>(wordSet.Select(w => new KeyVal
 ```
 En esta porción de código primero se llama al método `Array.Sort` para ordenar las palabras del texto. Este paso es necesario para poder identificar y contar las palabras repetidas posteriormente. Luego, el método llama a `GroupBy` para agrupar las palabras repetidas por su raíz. Se utiliza una expresión lambda para decir que se desea agrupar por la variable 'w', que representa cada palabra. A continuación, se llama a `ToDictionary` para contar el número de palabras que comparten cada raíz y almacenar esta información en un diccionario. La expresión lambda `g => g.Key` es utilizada para especificar que se desea utilizar la raíz de cada grupo como clave en el diccionario.
 Luego, se crea un nuevo hashset a partir de las claves del diccionario de conteo de palabras. Esto asegura que sólo se almacenan palabras únicas en el hashset. Finalmente, el hashset se agrega al array de diccionarios como clave y su 'count' como valor (esto será esencial para calcular el _TF_ ). Este proceso completo se realiza iterativamente por cada documento, utilizando la técnica del _Parallel ForEach_ para procesar los documentos en paralelo. Al salir del ciclo se llama a `IDFCorpus` que calcula el _Inverse Document Frequency_ (IDF) de cada palabra del corpus. El IDF mide la rareza de un término y se calcula: 
->idf(w) = log10(N/n)
+![](idf.png)
 
 >N -> Cantidad total de documentos
 
 >n -> Cantidad de documentos en los que aparece el término
 
 El método `CreateTF_IDF_Matrix` se llama a continuación y se encarga de crear la matriz término-documento representada por un array de diccionarios (cada diccionario representa el vector de un documento, o sea cada fila de la matriz es un documento). Dentro del método se calcula una variación del _Term Frequency_ que se conoce como: _Frecuencia Normalizada de Términos_ que mide la frecuencia de un término en el documento y se calcula:
->tf(w) =  c/C
+![](tf.png)
 
 >c -> cantidad de veces que se repite el término en el documento
 
@@ -107,14 +107,7 @@ Al terminar con el procesamiento de la consulta, en el método `QueryProcess(str
                 if(docTFIDF.ContainsKey(querykeys[Query.excludeoperator.Item2[i]])) return false;
             }
         }
-        if (Query.proximityoperator.Item1){
-            int index1 = Query.proximityoperator.Item2.Item1;
-            int index2 = Query.proximityoperator.Item2.Item2;
-            if (!docTFIDF.ContainsKey(querykeys[index1]) || !docTFIDF.ContainsKey(querykeys[index2])){
-                return false;
-            }
-        }
-        if(!Query.requireoperator.Item1 && !Query.excludeoperator.Item1 && !Query.proximityoperator.Item1) {
+        if(!Query.requireoperator.Item1 && !Query.excludeoperator.Item1) {
             foreach (KeyValuePair<string, double> word in query)
             {
                 //Si contiene al menos una palabra de la query y esta tiene tf-idf mayor que 0.05 (o sea no es una stopword) el documento es válido
@@ -126,7 +119,7 @@ Al terminar con el procesamiento de la consulta, en el método `QueryProcess(str
     }
 ```
 De esta forma se analizan solo los documentos válidos (o sea que el resto tienen score = 0). En caso de que sea válido se continúa en esa iteración y se calcula la _Similitud de Cosenos_ entre el vector del documento y el vector de la consulta. La similitud de cosenos es una medida utilizada para determinar la similitud entre dos documentos, en otras palabras, mide la similitud de las direcciones en las que apuntan los vectores, en lugar de medir la distancia entre ellos. Cuanto más cercanos estén los vectores, mayor será la similitud de cosenos y su fórmula es:
->CS(doc,query) = (Doc * Query) / (normaDoc * normaQuery)
+![](cosinesimilarity.png)
 
 >Doc -> vector documento
 

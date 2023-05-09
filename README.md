@@ -18,13 +18,6 @@ La aplicación está dividida en dos componentes fundamentales:
     
     - **Operador de “no presencia de la palabra” (!)**: Escriba el caracter '!' inmediatamente antes de la palabra sobre la que se va a ejecutar, sin un caracter en blanco por el medio Ej: '!perro' (Importante que se escriba correctamente). Esto garantiza que NO se muestre ningún documento en el que esté presente la palabra señalada.
     - **Operador de “presencia de la palabra” (∧)**: Escriba el caracter '∧' inmediatamente antes de la palabra sobre la que se va a ejecutar, sin un caracter en blanco por el medio Ej: '^perro'. Establece la obligatoriedad de que la palabra señalada esté presente en los documentos resultados.
-    - **Operador de “cercanı́a” (∼)**: Escriba el caracter (∼)
-inmediatamente después de la primera palabra sobre la que se va a ejecutar e inmediatamente
-antes de la segunda palabra, sin un caracter en blanco por el medio Ej: 'perro~gato':
-Calcula la cercanı́a de ambas palabras en los documentos (en los que aparezcan ambas a la
-vez) y aumenta el score de dichos documentos, ordenados según la cercanı́a (mientras más
-cercanas las palabras, más aumenta el score).
-
     - **Operador de “importancia” (*)**: Escriba el caracter '\*'
 inmediatamente antes de la palabra sobre la que se va a ejecutar, sin un caracter en blanco por
 el medio Ej: '\*palabra'. Esto modifica la importancia de una palabra en una búsqueda. Puede escribirse más de un caracter '\*' delante de la palabra, lo que denota

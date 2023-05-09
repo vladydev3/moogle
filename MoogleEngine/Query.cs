@@ -13,7 +13,6 @@ class Query
     //Variables de los operadores
     public static (bool, List<int>) requireoperator = (false, new List<int>());
     public static (bool, List<int>) excludeoperator = (false, new List<int>());
-    public static (bool, (int, int)) proximityoperator = (false, (0, 0));
 
     public Query(string query)
     {
@@ -80,7 +79,6 @@ class Query
 
     private static void AnyOperator(string[] query)
     {
-        //Se le dan
         for (int i = 0; i < query.Length; i++)
         {
             if (query[i].Contains("^"))
@@ -94,14 +92,6 @@ class Query
                 excludeoperator.Item1 = true;
                 excludeoperator.Item2.Add(i);
                 splitText[i] = splitText[i].Replace("!", "");
-            }
-            if (query[i] == "~")
-            {
-                proximityoperator.Item1 = true;
-                proximityoperator.Item2 = (i - 1, i);
-                var temp = splitText.ToList();
-                temp.RemoveAt(i);
-                splitText = temp.ToArray();
             }
         }
     }

@@ -5,14 +5,13 @@ public class VectorModel
     //Para guardar el Score
     public List<(double,int)> Score = new List<(double, int)>();
     private static Dictionary<string,double> query = new Dictionary<string, double>(); 
-
     public VectorModel(Dictionary<string,double> queryVector)
     {
         query = queryVector;
         for (int i = 0; i < Documents.tf_idf_Matrix.Length; i++)
         {
             //Si el documento no es relevante, pasa a la otra iteración
-            if (!RelevantDoc(Documents.tf_idf_Matrix[i])) continue;
+            if (!RelevantDoc(Documents.tf_idf_Matrix[i], i)) continue;
             double similarity = CosineSimilarity(Documents.tf_idf_Matrix[i], queryVector);
             foreach (var word in Query.splitText)
             {
@@ -47,29 +46,23 @@ public class VectorModel
         }
         return dotProduct;
     }
-    private static bool RelevantDoc(Dictionary<string,double> docTFIDF){
+    private static bool RelevantDoc(Dictionary<string,double> docTFIDF, int i){
         //Comprueba si el documento es relevante para la query
         string[] querykeys = query.Keys.ToArray();
         if (Query.requireoperator.Item1){
-            for (int i = 0; i < Query.requireoperator.Item2.Count; i++)
+            for (int j = 0; j < Query.requireoperator.Item2.Count; j++)
             {
-                if(!docTFIDF.ContainsKey(querykeys[Query.requireoperator.Item2[i]])) return false;
+                if(!docTFIDF.ContainsKey(querykeys[Query.requireoperator.Item2[j]])) return false;
             }
         }
         if (Query.excludeoperator.Item1){
-            for (int i = 0; i < Query.excludeoperator.Item2.Count; i++)
+            for (int j = 0; j < Query.excludeoperator.Item2.Count; j++)
             {
-                if(docTFIDF.ContainsKey(querykeys[Query.excludeoperator.Item2[i]])) return false;
+                if(docTFIDF.ContainsKey(querykeys[Query.excludeoperator.Item2[j]])) return false;
             }
         }
-        if (Query.proximityoperator.Item1){
-            int index1 = Query.proximityoperator.Item2.Item1;
-            int index2 = Query.proximityoperator.Item2.Item2;
-            if (!docTFIDF.ContainsKey(querykeys[index1]) || !docTFIDF.ContainsKey(querykeys[index2])){
-                return false;
-            }
-        }
-        if(!Query.requireoperator.Item1 && !Query.excludeoperator.Item1 && !Query.proximityoperator.Item1) {
+
+        if(!Query.requireoperator.Item1 && !Query.excludeoperator.Item1) {
             foreach (KeyValuePair<string, double> word in query)
             {
                 //Si contiene al menos una palabra de la query y esta tiene tf-idf mayor que 0.05 (o sea no es una stopword) el documento es válido
