@@ -5,6 +5,7 @@ public class VectorModel
     //Para guardar el Score
     public List<(double,int)> Score = new List<(double, int)>();
     private static Dictionary<string,double> query = new Dictionary<string, double>(); 
+    static int distance = 1;
     public VectorModel(Dictionary<string,double> queryVector)
     {
         query = queryVector;
@@ -13,6 +14,9 @@ public class VectorModel
             //Si el documento no es relevante, pasa a la otra iteración
             if (!RelevantDoc(Documents.tf_idf_Matrix[i], i)) continue;
             double similarity = CosineSimilarity(Documents.tf_idf_Matrix[i], queryVector);
+            
+            similarity += 100 * (1.0/distance);
+            
             foreach (var word in Query.splitText)
             {
                 //Si el documento contiene además de la raíz de la palabra, la palabra exacta a la que ingresó el usuario, se le multiplica * 10 el valor de score
@@ -61,8 +65,18 @@ public class VectorModel
                 if(docTFIDF.ContainsKey(querykeys[Query.excludeoperator.Item2[j]])) return false;
             }
         }
+        if (Query.proximityoperator.Item1){
+            string word1 = Query.splitText[Query.proximityoperator.Item2.Item1];
+            string word2 = Query.splitText[Query.proximityoperator.Item2.Item2];
+            if (!docTFIDF.ContainsKey(word1) || !docTFIDF.ContainsKey(word2)){
+                return false;
+            }
+            else{
+                distance = Math.Abs(GetIndex(word1, i)-GetIndex(word2, i));
+            }
+        }
 
-        if(!Query.requireoperator.Item1 && !Query.excludeoperator.Item1) {
+        if(!Query.requireoperator.Item1 && !Query.excludeoperator.Item1 && !Query.proximityoperator.Item1) {
             foreach (KeyValuePair<string, double> word in query)
             {
                 //Si contiene al menos una palabra de la query y esta tiene tf-idf mayor que 0.05 (o sea no es una stopword) el documento es válido
@@ -71,5 +85,14 @@ public class VectorModel
             return false;
         }
         return true;
+    }
+    static int GetIndex(string word, int indexDoc){
+        int index = 0;
+        for (int i = 0; i < Documents.words[indexDoc].Length; i++)
+        {
+            if (Documents.words[indexDoc][i] == word) return index;
+            index += Documents.words[indexDoc][i].Length+1;
+        }
+        return -1;
     }
 }

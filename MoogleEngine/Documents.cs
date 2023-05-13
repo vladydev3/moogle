@@ -17,7 +17,7 @@ public class Documents
     public static Dictionary<string, double> idf = new Dictionary<string, double>();
     //Matriz TF-IDF
     public static Dictionary<string, double>[] tf_idf_Matrix = new Dictionary<string, double>[0];
-
+    public static string[][] words = new string[0][];
     public static void LoadDocs()
     {
         string[] files = Directory.GetFiles(Path.Join("..", "Content"));
@@ -25,6 +25,7 @@ public class Documents
         DocTitle = new string[files.Length];
         DocText = new string[files.Length];
         wordsinText = new HashSet<string>[files.Length];
+        words = new string[files.Length][];
 
         stemwordFrec = new Dictionary<string, int>[DocText.Length];
         tf_idf_Matrix = new Dictionary<string, double>[DocText.Length];
@@ -42,9 +43,9 @@ public class Documents
                 string content = reader.ReadToEnd();
                 DocText[index] = content;
                 string strippedContent = Regex.Replace(content, @"[\p{P}\p{S}]+", " "); // Eliminar signos de puntuación
-                string[] words = strippedContent.ToLower().Split(new[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-                wordsinText[index] = words.ToHashSet(); //Almacenamos las palabras únicas de cada documento
-                string[] stemmedwords = StemmingText(words); //Le aplicamos Stemming a las palabras
+                words[index] = strippedContent.ToLower().Split(new[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+                wordsinText[index] = words[index].ToHashSet(); //Almacenamos las palabras únicas de cada documento
+                string[] stemmedwords = StemmingText(words[index]); //Le aplicamos Stemming a las palabras
                 //Ordenar las palabras del texto para contar luego las repetidas
                 Array.Sort(stemmedwords);
                 //Agrupar y contar las palabras repetidas
