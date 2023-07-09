@@ -54,7 +54,8 @@ class Query
             {
                 int distance = Levenshtein.DistanciaLev(NotFound, word);
                 if (distance < shortestDistance)
-                {   //Se guarda la menor distancia entre la palabra no encontrada y las palabras del corpus
+                {   //Se guarda la menor distancia entre la palabra no encontrada y
+                    //las palabras del corpus
                     shortestDistance = distance;
                     similar = word;
                 }

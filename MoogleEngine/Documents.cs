@@ -140,7 +140,8 @@ public class Documents
         }
         return wordsStem;
     }
-    public static string CreateSnippet(int indexDoc, Dictionary<string, double> query)//Este metodo elabora el snippet 
+    public static string CreateSnippet(int indexDoc, Dictionary<string, double> query)
+    //Este metodo elabora el snippet 
     {
         string text = DocText[indexDoc];
         int middle = -1;
@@ -148,12 +149,15 @@ public class Documents
 
         foreach (var word in query)
         {
-            if (word.Value < 0.05) continue; //Esto para evitar que arme el snippet alrededor de alguna stopword 
-            middle = text.IndexOf(word.Key); //Buscamos el índice de la palabra en el texto
+            //Esto para evitar que arme el snippet alrededor de alguna stopword 
+            if (word.Value < 0.05) continue; 
+            //Buscamos el índice de la palabra en el texto
+            middle = text.IndexOf(word.Key); 
 
             if (middle >= 0)
             {
-                if (text.Length <= SnipLeng) //Si el texto tiene menos de 500 caracteres se devuelve el texto entero
+                //Si el texto tiene menos de 500 caracteres se devuelve el texto entero
+                if (text.Length <= SnipLeng) 
                     return text;
                 if (text.Length - middle <= SnipLeng)
                     return text.Substring(middle, text.Length - middle);

@@ -19,7 +19,8 @@ public class VectorModel
             
             foreach (var word in Query.splitText)
             {
-                //Si el documento contiene además de la raíz de la palabra, la palabra exacta a la que ingresó el usuario, se le multiplica * 10 el valor de score
+                //Si el documento contiene además de la raíz de la palabra, la palabra
+                //exacta a la que ingresó el usuario, se multiplica*10 el valor de score
                 if(Documents.wordsinText[i].Contains(word))
                 {
                     similarity *= 10;
@@ -79,7 +80,8 @@ public class VectorModel
         if(!Query.requireoperator.Item1 && !Query.excludeoperator.Item1 && !Query.proximityoperator.Item1) {
             foreach (KeyValuePair<string, double> word in query)
             {
-                //Si contiene al menos una palabra de la query y esta tiene tf-idf mayor que 0.05 (o sea no es una stopword) el documento es válido
+                //Si contiene al menos una palabra de la query y esta tiene tf-idf mayor que 0.05 (o sea no es una stopword)
+                //el documento es válido
                 if(docTFIDF.ContainsKey(word.Key) && word.Value > 0.05) return true;
             }       
             return false;
