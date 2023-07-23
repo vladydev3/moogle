@@ -1,0 +1,150 @@
+\documentclass{article}
+
+\usepackage[spanish]{babel}
+
+\usepackage[letterpaper,top=2cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+% Useful packages
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+
+\title{Informe del Proyecto de Programación Moogle!}
+\author{Vladimir Piñera Verdecia C121}
+
+\begin{document}
+
+\begin{figure}
+\centering
+\includegraphics[width=1\linewidth]{logo.png}
+\end{figure}
+
+\maketitle
+
+\begin{abstract}
+En este informe se presenta el desarrollo de un modelo vectorial de recuperación de información. El modelo vectorial es ampliamente utilizado en la recuperación de información y se basa en la representación de documentos y consultas como vectores en un espacio multidimensional. 
+\end{abstract}
+
+\section{Estructura del proyecto}
+
+\subsection{Moogle Engine}
+Cuenta con 8 clases que se encargan del correcto funcionamiento del programa:
+\begin{itemize}
+
+\item \textbf{Moogle:} Cuenta con un método QueryProcess (el cual fue modificado) que es el encargado de llevar el flujo de trabajo del programa, es la clase principal.
+
+\item \textbf{SearchItem:} No se le realizaron cambios. Esta es la clase que se instancia para almacenar los documentos que finalmente se devuelven.
+
+\item \textbf{SearchResult:} Tampoco se le realizaron cambios. Esta clase es la encargada de devolver los objetos de tipo \textit{SearchItem}.
+
+\item \textbf{Documents:} En esta clase se procesan los documentos y se crea la matriz TF-IDF.
+
+\item \textbf{Query:} Se encarga del procesamiento de la consulta del usuario y crea el vector.
+
+\item \textbf{VectorModel:} Dentro de esta clase se realiza el cálculo del score. Se calcula la similitud de cosenos entre el vector de consulta y cada vector de documentos y luego se ordenan descendentemente teniendo en cuenta el valor obtenido.
+
+\item \textbf{SpanishStemmer:} Clase auxiliar que contiene de una adaptación al español del algoritmo de Porter para aplicarle stemming a las palabras del corpus.
+
+\item \textbf{Levenshtein:} Clase que contiene el algoritmo de Distancia de Levenshtein recursivo y se usa para buscar la palabra que más se asemeja a la no encontrada en el corpus.
+
+\end{itemize}
+
+\subsection{Moogle Server}
+
+Aquí se encuentra el servidor web y la interfaz gráfica de Moogle!. Se le realizaron algunos cambios a los archivos \textit{Index.razor} y \textit{site.css} para mejorar la interfaz gráfica y agregarle algunas funcionalidades como mostrar el tiempo que demora la búsqueda y una sugerencia en caso de que existan pocos o ningún resultado.
+
+\vspace{0.5cm}
+\includegraphics[width=0.5\linewidth]{busqueda.png}
+\includegraphics[width=0.5\linewidth]{sugerencia.png}
+
+\section{Flujo de ejecución del programa}
+\subsection{Clase Documents}
+
+Primero se cargan los documentos con el método \textit{LoadDocs} de la clase Documents, esto antes de la primera ejecución del programa, de esta forma se cargan solo una vez:
+
+\vspace{0.5cm}
+\includegraphics[width=0.5\linewidth]{cargardocs.png}
+\vspace{0.5cm}
+
+Este método almacena en arrays los títulos de cada documento, así como su texto y se utiliza un Hashset para almacenar las palabras únicas del mismo (aprovechando el hecho de que un hashset es una colección de elementos únicos). Luego se le aplica el algoritmo de Porter para Stemming a cada palabra del documento llamando al método StemmingText quien a su vez llama a la clase SpanishStemmer, esto se guarda temporalmente en un array. Después de guardar las palabras en este array se procesan para agregar al array de diccionarios stemwordFrec el diccionario correspondiente al documento, el cual almacena cada palabra con su cantidad de apariciones en el documento.
+
+\vspace{0.5cm}
+\includegraphics[width=0.5\linewidth]{stemdoc.png}
+\vspace{0.5cm}
+
+En esta porción de código primero se llama al método \textit{Array.Sort} para ordenar las palabras del texto. Este paso es necesario para poder identificar y contar las palabras repetidas posteriormente. Luego, el método llama a \textit{GroupBy} para agrupar las palabras repetidas por su raíz. Se utiliza una expresión lambda para decir que se desea agrupar por la variable 'w', que representa cada palabra. A continuación, se llama a \textit{ToDictionary} para contar el número de palabras que comparten cada raíz y almacenar esta información en un diccionario. La expresión lambda \textit{g => g.Key} es utilizada para especificar que se desea utilizar la raíz de cada grupo como clave en el diccionario. Luego, se crea un nuevo hashset a partir de las claves del diccionario de conteo de palabras. Esto asegura que sólo se almacenan palabras únicas en el hashset. Finalmente, el hashset se agrega al array de diccionarios como clave y su 'count' como valor (esto será esencial para calcular el TF ). Este proceso completo se realiza iterativamente por cada documento, utilizando la técnica del \textit{Parallel ForEach} para procesar los documentos en paralelo. Al salir del ciclo se llama a \textit{IDFCorpus} que calcula el \textbf{Inverse Document Frequency (IDF)} de cada palabra del corpus. El IDF mide la rareza de un término y se calcula:
+
+\vspace{0.3cm}
+$idf(\text{word}) = \log_{10}\frac{N}{n}$
+\newline
+
+Donde N es la cantidad de documentos y n es la cantidad de documentos que contienen el término.
+
+El método \textit{CreateTF\_IDF\_Matrix} se llama a continuación y se encarga de crear la matriz término-documento representada por un array de diccionarios (cada diccionario representa el vector de un documento, o sea cada fila de la matriz es un documento). Dentro del método se calcula una variación del \textbf{Term Frequency} que se conoce como: \textbf{Frecuencia Normalizada de Términos} que mide la frecuencia de un término en el documento y se calcula:
+
+\vspace{0.3cm}
+$tf(\text{word}) = \frac{c}{C}$
+\newline
+
+Donde c es la cantidad de veces que se repite el término en el documento y C es la cantidad de veces que se repite el término más frecuente en el documento.
+
+Luego se multiplican los valores de TF y de IDF de cada palabra en su respectivo documento, se almacena finalmente en \textit{CreateTF\_IDF\_Matrix} y se le aplica la Normalización Euclidiana a cada vector.
+
+\subsection{Clase Query}
+
+Luego de la carga de documentos, viene la consulta del usuario. Dentro del método \textit{QueryProcess(string query)} de la clase \textit{Moogle} se crea la instancia de la clase \textit{Query} la cual es la encargada de procesar la consulta y su funcionamiento se explicará detalladamente a continuación.
+En el constructor de la clase se divide el texto de la consulta en palabras y se buscan posibles operadores en la misma haciendo un llamado al método AnyOperator el cual encuentra los operadores '!', '~' o '\^' (el operador '*' se comprueba luego por separado). Luego se itera a través del array que contiene el texto dividido, se le aplica el \textbf{Algoritmo de Porter} para Stemming a cada palabra, así como también se almacenan en el diccionario \textit{queryVector} las palabras únicas (con stemming) con su frecuencia en la consulta.
+En caso de que una palabra no aparezca en el corpus de documentos, se busca la más similar a ella haciendo un llamado al método \textit{SimilarWord} que a su vez se apoya en la clase \textit{Levenshtein} que utiliza el algoritmo del mismo nombre para medir qué tan similares son dos palabras. De esta forma se obtiene
+la palabra más cercana a la ingresada por el usuario y se añade a \textit{suggestion}, variable estática de la clase Moogle.
+
+\vspace{0.5cm}
+\includegraphics[width=0.5\linewidth]{similar.png}
+\vspace{0.5cm}
+
+Por último se llama al método \textit{QueryProcessed} que se encarga de crear el vector de la query \textit{queryVector}, en este caso se sobreescribe con el valor \textbf{TF-IDF} el valor almacenado en el diccionario (anteriormente almacenaba la frecuencia del término) de esta forma se optimiza el uso de memoria. El valor de TF-IDF se multiplica por 2 elevado a k, siendo k la cantidad de veces que aparece el operador de importancia en la palabra (en caso de no existir k sería igual a 0 y se multiplicaría el \textbf{TF-IDF} por 1). Luego se le aplica la \textbf{Normalización Euclidiana} para normalizar los valores del vector.
+
+\subsection{Clase VectorModel}
+
+Al terminar con el procesamiento de la consulta, en el método \textit{QueryProcess(string query)} de la clase Moogle se crea la instancia de la clase \textit{VectorModel} la cual recibe como parámetro el vector de la consulta. En el constructor de la clase \textit{VectorModel} se itera sobre la matriz de documentos y se llama al método \textit{RelevantDoc} pasándole como parámetro el vector del documento por el que va la iteración. Este método devuelve un true si el documento es válido y devuelve false si no lo es. Un documento se
+considera no válido cuando incumple con alguna condición que imponen los operadores (en caso de que se utilicen) o si no contiene ninguna palabra de la consulta. De esta forma se analizan solo los documentos válidos (o sea que el resto tienen score = 0). En caso de que sea válido se continúa en esa iteración y se calcula la \textbf{Similitud de Cosenos} entre el vector del documento y el vector de la consulta. La similitud de cosenos es una medida utilizada para determinar la
+similitud entre dos documentos, en otras palabras, mide la similitud de las direcciones en las que apuntan los vectores, en lugar de medir la distancia entre ellos. Cuanto más cercanos estén los vectores, mayor será la similitud de cosenos y su fórmula es:
+
+\vspace{0.3cm}
+$Cosine Similarity(\text{doc, query}) = \frac{(Doc * Query)}{(normaDoc * normaQuery)}$
+\newline
+
+Donde \textbf{Doc} es el vector del documento, \textbf{Query} el vector de la consulta, \* representa el producto escalar, \textbf{normaDoc} es la raíz cuadrada del producto escalar del vector documento por sí mismo y \textbf{normaQuery} la raíz cuadrada del producto escalar del vector consulta por sí mismo.
+\newline
+
+Luego de calcular la similitud se le suma a ese valor un número que es inversamente proporcional a la distancia de las dos palabras a las que se le aplica el operador de cercanía (en caso de no usarse ese
+operador esa distancia es igual a 1). Luego se comprueba si el documento contiene alguna palabra exacta (sin stemming aplicado) a la que ingresó el usuario (para eso se guardaron las palabras sin
+stemming en la variable \textit{wordsinText} de la clase \textit{Documents}). En caso de que contenga alguna palabra
+se multiplica por 10 el valor del score, mientras más palabras exactas contenga el documento, mayor será su score.
+Lo próximo que se realiza es guardar en la variable \textit{Score} (que es una lista de tuplas, donde cada tupla contiene el score del documento y el índice del mismo para poder devolverlo correctamente). Por último se ordenan descendientemente.
+
+\vspace{0.5cm}
+\includegraphics[width=0.5\linewidth]{score.png}
+\vspace{0.5cm}
+
+\subsection{Preparación de los documentos a devolver en la clase Moogle}
+
+Cuando ya se tienen los documentos relevantes ordenados por score le asignamos un tamaño al array items de tipo \textit{SearchItem} y al array que almacenará los snippets. Este tamaño es el mínimo entre 10 y la cantidad de documentos encontrados, de esta forma se evitará devolver demasiados documentos. Luego se elabora el snippet para cada documento y se añade a items los objetos \textit{SearchItem} que contienen el título del documento, un snippet y el score correspondiente.
+
+\vspace{0.5cm}
+\includegraphics[width=0.5\linewidth]{snippet.png}
+\vspace{0.5cm}
+
+Después se comprueba si hay más de 5 resultados para en ese caso no mostrar sugerencia alguna.
+Por último el método devuelve un objeto \textit{SearchResult} con el array items y la sugerencia.
+Terminados todos estos procesos se mostrarán los resultados en la web y se podrán realizar las búsquedas necesarias.
+
+\bibliographystyle{alpha}
+\bibliography{sample}
+\begin{enumerate}
+\item https://es.wikipedia.org/wiki/Distancia\_de\_Levenshtein,
+\item https://es.wikipedia.org/wiki/Similitud\_coseno,
+\item https://es.wikipedia.org/wiki/Tf-idf,
+\item https://es.wikipedia.org/wiki/Algoritmo\_de\_Porter
+\end{enumerate}
+
+\end{document}
