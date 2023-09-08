@@ -168,6 +168,7 @@ public class Documents
                     return text.Substring(middle - 250, SnipLeng);
             }
         }
+        if (text.Length <= SnipLeng) return text;
         return text.Substring(0, 500);
     }
 }
